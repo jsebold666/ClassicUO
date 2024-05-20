@@ -30,8 +30,7 @@
 
 #endregion
 
-using System;
-using System.Xml;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 // ## BEGIN - END ## // OVERHEAD / UNDERCHAR
@@ -41,13 +40,14 @@ using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SDL2;
+using System;
 using System.Text.Json.Serialization;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -57,6 +57,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         public bool IsLastAttackBar { get; set; } = false;
         public static BaseHealthBarGump LastAttackBar { get; set; }
+        protected bool HasBeenBuilt { get; set; } = false;
 
         protected BaseHealthBarGump(Entity entity) : this(0, 0)
         {
@@ -78,6 +79,7 @@ namespace ClassicUO.Game.UI.Gumps
             // ## BEGIN - END ## // MISC
 
             BuildGump();
+            HasBeenBuilt = true;
         }
 
         public virtual void SetNewMobile(uint serial)
@@ -90,6 +92,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 Children.Clear();
                 BuildGump();
+                HasBeenBuilt = true;
             }
         }
 
@@ -126,7 +129,7 @@ namespace ClassicUO.Game.UI.Gumps
         public bool IsLastTarget { get; set; } = false;
 
         private bool _locked = false;
-        private bool IsLocked
+        private new bool IsLocked
         {
             get { return _locked; }
             set
@@ -147,20 +150,20 @@ namespace ClassicUO.Game.UI.Gumps
 
         protected abstract void BuildGump();
 
+        //public override void AfterDispose()
+        //{
+        //    base.AfterDispose();
 
-        public override void Dispose()
+        //    _textBox?.Dispose();
+        //    _textBox = null;
+        //}
+
+        protected override void OnMove(int x, int y)
         {
-            /*if (TargetManager.LastAttack != LocalSerial)
-            {
-                GameActions.SendCloseStatus(LocalSerial);
-            }*/
+            base.OnMove(x, y);
 
             if (IsLastTarget && ProfileManager.CurrentProfile != null)
                 ProfileManager.CurrentProfile.LastTargetHealthBarPos = Location;
-
-            _textBox?.Dispose();
-            _textBox = null;
-            base.Dispose();
         }
 
         public override void Save(XmlTextWriter writer)
@@ -183,6 +186,7 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 _name = World.Player.Name;
                 BuildGump();
+                HasBeenBuilt = true;
             }
             else if (ProfileManager.CurrentProfile.SaveHealthbars)
             {
@@ -203,6 +207,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 _outOfRange = true;
                 BuildGump();
+                HasBeenBuilt = true;
             }
             else
             {
@@ -300,18 +305,21 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                 }
 
-                MessageManager.HandleMessage
-                (
-                    World.Player,
-                    ResGeneral.NowFollowing,
-                    string.Empty,
-                    0,
-                    MessageType.Regular,
-                    3,
-                    TextType.CLIENT
-                );
-                ProfileManager.CurrentProfile.FollowingMode = true;
-                ProfileManager.CurrentProfile.FollowingTarget = LocalSerial;
+                if (!ProfileManager.CurrentProfile.DisableAutoFollowAlt)
+                {
+                    MessageManager.HandleMessage
+                    (
+                        World.Player,
+                        ResGeneral.NowFollowing,
+                        string.Empty,
+                        0,
+                        MessageType.Regular,
+                        3,
+                        TextType.CLIENT
+                    );
+                    ProfileManager.CurrentProfile.FollowingMode = true;
+                    ProfileManager.CurrentProfile.FollowingTarget = LocalSerial;
+                }
             }
         }
 
@@ -437,6 +445,11 @@ namespace ClassicUO.Game.UI.Gumps
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
+            if (IsDisposed)
+            {
+                return false;
+            }
+
             base.Draw(batcher, x, y);
 
             if (Keyboard.Alt && UIManager.MouseOverControl != null && (UIManager.MouseOverControl == this || UIManager.MouseOverControl.RootParent == this))
@@ -567,6 +580,7 @@ namespace ClassicUO.Game.UI.Gumps
             if (_textBox != null)
             {
                 _textBox.MouseUp -= TextBoxOnMouseUp;
+                _textBox.Dispose();
             }
 
             _textBox = null;
@@ -578,7 +592,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             base.Update();
 
-            if (IsDisposed)
+            if (IsDisposed || !HasBeenBuilt)
             {
                 return;
             }
@@ -651,12 +665,12 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                     }
 
-                    if (_background.Hue != 912)
+                    if (_background != null && _background.Hue != 912)
                     {
                         _background.Hue = 912;
                     }
 
-                    if (_hpLineRed.LineColor != HPB_COLOR_GRAY)
+                    if (_hpLineRed != null && _hpLineRed.LineColor != HPB_COLOR_GRAY)
                     {
                         _hpLineRed.LineColor = HPB_COLOR_GRAY;
 
@@ -673,7 +687,10 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                     }
 
-                    _bars[0].IsVisible = false;
+                    if (_bars[0] != null)
+                    {
+                        _bars[0].IsVisible = false;
+                    }
                 }
             }
 
@@ -1306,7 +1323,7 @@ namespace ClassicUO.Game.UI.Gumps
                     );
                     Control m, s;
                     Add
-                    (m = 
+                    (m =
                         new LineCHB
                         (
                             HPB_BAR_SPACELEFT,
@@ -1754,6 +1771,7 @@ namespace ClassicUO.Game.UI.Gumps
             if (_textBox != null)
             {
                 _textBox.MouseUp -= TextBoxOnMouseUp;
+                _textBox.Dispose();
             }
 
             _textBox = null;
@@ -2003,7 +2021,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             base.Update();
 
-            if (IsDisposed /* || (_textBox != null && _textBox.IsDisposed)*/)
+            if (IsDisposed || !HasBeenBuilt)
             {
                 return;
             }
@@ -2080,7 +2098,10 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                     }
 
-                    _bars[0].IsVisible = false;
+                    if (_bars[0] != null)
+                    {
+                        _bars[0].IsVisible = false;
+                    }
                 }
             }
 
@@ -2270,7 +2291,6 @@ namespace ClassicUO.Game.UI.Gumps
                     _background.Graphic = World.Player.InWarMode ? settings.Background_War : settings.Background_Normal;
                 }
             }
-
 
             if (_bars.Length > 0 && _bars[0].Hue != hpForegroundHue) //HP Foreground
             {
