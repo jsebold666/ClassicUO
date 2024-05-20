@@ -1817,18 +1817,29 @@ namespace ClassicUO.Game.UI.Gumps
 
             _zoneSets.Clear();
 
-            List<string> zonefiles = [.. Directory.GetFiles(_mapFilesPath, "*.zones.json")];
-            zonefiles.AddRange(Directory.GetFiles(Settings.GlobalSettings.UltimaOnlineDirectory, "*.zones.json"));
 
-            foreach (string filename in zonefiles)
+            try
             {
-                bool shouldHide = !string.IsNullOrEmpty
-                (
-                    _hiddenZoneFiles.FirstOrDefault(x => x.Contains(filename))
-                );
+                // Initialize the list of zone files
+                List<string> zonefiles = new List<string>(Directory.GetFiles(_mapFilesPath, "*.zones.json"));
 
-                _zoneSets.AddZoneSetByFileName(filename, shouldHide);
+                // Example usage
+                foreach (var file in zonefiles)
+                {
+                      bool shouldHide = !string.IsNullOrEmpty
+                      (
+                          _hiddenZoneFiles.FirstOrDefault(x => x.Contains(file))
+                      );
+
+                      _zoneSets.AddZoneSetByFileName(file, shouldHide);
+                }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+
+           
         }
 
         private bool ShouldDrawGrid()

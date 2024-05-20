@@ -269,7 +269,7 @@ namespace ClassicUO.Assets
                                 }
                                 else
                                 {
-                                    gump_availableIDs = [i];
+                                    gump_availableIDs = new uint[] { i };
                                 }
 
                                 stream.Dispose();
