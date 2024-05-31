@@ -124,7 +124,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal struct CorpseInfo
+    public struct CorpseInfo
     {
         public CorpseInfo(uint corpseSerial, uint objectSerial, Direction direction, bool isRunning)
         {

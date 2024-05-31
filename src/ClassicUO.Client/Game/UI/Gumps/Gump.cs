@@ -32,20 +32,26 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Xml;
+using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
+using ClassicUO.Input;
 using ClassicUO.Renderer;
-using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class Gump : Control
+    public class Gump : Control
     {
+<<<<<<< HEAD
         public Gump(World world, uint local, uint server)
+=======
+        private bool isLocked = false;
+
+        public Gump(uint local, uint server)
+>>>>>>> dev_dust765_to_main
         {
             World = world;
             LocalSerial = local;
@@ -54,9 +60,13 @@ namespace ClassicUO.Game.UI.Gumps
             AcceptKeyboardInput = false;
         }
 
+<<<<<<< HEAD
         public World World { get; }
 
         public bool CanBeSaved => GumpType != Gumps.GumpType.None;
+=======
+        public bool CanBeSaved => GumpType != Gumps.GumpType.None || ServerSerial != 0;
+>>>>>>> dev_dust765_to_main
 
         public virtual GumpType GumpType { get; }
 
@@ -64,6 +74,54 @@ namespace ClassicUO.Game.UI.Gumps
 
         public uint MasterGumpSerial { get; set; }
 
+        public float AlphaOffset = 0;
+
+        protected override void OnMouseWheel(MouseEventType delta)
+        {
+            base.OnMouseWheel(delta);
+
+            if (Keyboard.Alt && ProfileManager.CurrentProfile.EnableAlphaScrollingOnGumps)
+            {
+                if (delta == MouseEventType.WheelScrollUp && Alpha < 0.99)
+                {
+                    AlphaOffset += 0.02f;
+                    Alpha += 0.02f;
+                    foreach (Control c in Children)
+                    {
+                        c.Alpha += 0.02f;
+                        if (c.Alpha > 1) c.Alpha = 1;
+                    }
+                }
+                else if(Alpha > 0.1)
+                {
+                    AlphaOffset -= 0.02f;
+                    Alpha -= 0.02f;
+                    foreach (Control c in Children)
+                        c.Alpha -= 0.02f;
+                }
+            }
+        }
+
+        public virtual bool IsLocked
+        {
+            get { return isLocked; }
+            set
+            {
+                isLocked = value;
+                if (isLocked)
+                {
+                    CanMove = false;
+                    CanCloseWithRightClick = false;
+                }
+                else
+                {
+                    CanMove = true;
+                    CanCloseWithRightClick = true;
+                }
+            }
+        }
+
+        public bool CanBeLocked { get; set; } = true;
 
         public override void Update()
         {
@@ -93,13 +151,24 @@ namespace ClassicUO.Game.UI.Gumps
             base.Dispose();
         }
 
+        protected override void OnMouseUp(int x, int y, MouseButtonType button)
+        {
+            base.OnMouseUp(x, y, button);
+            if (CanBeLocked && Keyboard.Ctrl && Keyboard.Alt && UIManager.MouseOverControl != null && (UIManager.MouseOverControl == this || UIManager.MouseOverControl.RootParent == this))
+            {
+                IsLocked ^= true;
+            }
+        }
 
         public virtual void Save(XmlTextWriter writer)
         {
-            writer.WriteAttributeString("type", ((int) GumpType).ToString());
+            writer.WriteAttributeString("type", ((int)GumpType).ToString());
             writer.WriteAttributeString("x", X.ToString());
             writer.WriteAttributeString("y", Y.ToString());
             writer.WriteAttributeString("serial", LocalSerial.ToString());
+            writer.WriteAttributeString("serverSerial", ServerSerial.ToString());
+            writer.WriteAttributeString("isLocked", isLocked.ToString());
+            writer.WriteAttributeString("alphaOffset", AlphaOffset.ToString());
         }
 
         public void SetInScreen()
@@ -120,6 +189,15 @@ namespace ClassicUO.Game.UI.Gumps
 
         public virtual void Restore(XmlElement xml)
         {
+            if (bool.TryParse(xml.GetAttribute("isLocked"), out bool lockedStatus))
+                IsLocked = lockedStatus;
+            if (float.TryParse(xml.GetAttribute("alphaOffset"), out float alpha))
+            {
+                AlphaOffset = alpha;
+                Alpha += alpha;
+                foreach (Control c in Children)
+                    c.Alpha += alpha;
+            }
         }
 
         public void RequestUpdateContents()
@@ -182,7 +260,7 @@ namespace ClassicUO.Game.UI.Gumps
                             break;
 
                         case StbTextBox textBox:
-                            entries.Add(new Tuple<ushort, string>((ushort) textBox.LocalSerial, textBox.Text));
+                            entries.Add(new Tuple<ushort, string>((ushort)textBox.LocalSerial, textBox.Text));
 
                             break;
                     }

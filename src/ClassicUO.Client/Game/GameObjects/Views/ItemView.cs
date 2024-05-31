@@ -30,22 +30,25 @@
 
 #endregion
 
-using System;
-using System.Collections.Generic;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
+// ## BEGIN - END ## // ART / HUE CHANGES
+using ClassicUO.Dust765.Dust765;
+// ## BEGIN - END ## // ART / HUE CHANGES
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.IO;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
 using MathHelper = ClassicUO.Utility.MathHelper;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Item
+    public partial class Item
     {
         private static EquipConvData? _equipConvData;
 
@@ -87,6 +90,44 @@ namespace ClassicUO.Game.GameObjects
             ushort hue = Hue;
             ushort graphic = DisplayedGraphic;
             bool partial = ItemData.IsPartialHue;
+
+            // ## BEGIN - END ## // ART / HUE CHANGES
+            if (CombatCollection.IsStealthArt(Graphic))
+            {
+                if (ProfileManager.CurrentProfile.ColorStealth || ProfileManager.CurrentProfile.StealthNeonType != 0)
+                    hue = CombatCollection.StealthtHue(hue);
+            }
+            // ## BEGIN - END ## // ART / HUE CHANGES
+            // ## BEGIN - END ## // MISC
+            if (ProfileManager.CurrentProfile.BlockWoS)
+            {
+                if (StaticFilters.IsWallOfStone(Graphic) || Graphic == ProfileManager.CurrentProfile.BlockWoSArt)
+                {
+                    if (ProfileManager.CurrentProfile.BlockWoSFelOnly && World.MapIndex != 0)
+                    {
+                        TileDataLoader.Instance.StaticData[Graphic].Flags = TileFlag.Impassable;
+                    }
+                    else
+                    {
+                        TileDataLoader.Instance.StaticData[Graphic].Flags = TileFlag.Impassable;
+                    }
+                }
+            }
+            if (ProfileManager.CurrentProfile.BlockEnergyF)
+            {
+                if (StaticFilters.IsEnergyField(Graphic) || Graphic == ProfileManager.CurrentProfile.BlockEnergyFArt)
+                {
+                    if (ProfileManager.CurrentProfile.BlockEnergyFFelOnly && World.MapIndex != 0)
+                    {
+                        TileDataLoader.Instance.StaticData[Graphic].Flags = TileFlag.Impassable;
+                    }
+                    else
+                    {
+                        TileDataLoader.Instance.StaticData[Graphic].Flags = TileFlag.Impassable;
+                    }
+                }
+            }
+            // ## BEGIN - END ## // MISC
 
             if (OnGround)
             {
@@ -178,6 +219,30 @@ namespace ClassicUO.Game.GameObjects
                 hueVec.Z = 0.5f;
             }
 
+            // ## BEGIN - END ## // MISC2
+            if (ProfileManager.CurrentProfile.TransparentHousesEnabled)
+            {
+                GameObject tile = World.Map.GetTile(X, Y);
+
+                if (tile != null)
+                {
+                    if ((Z - World.Player.Z) > ProfileManager.CurrentProfile.TransparentHousesZ && (Z - tile.Z) > ProfileManager.CurrentProfile.DontRemoveHouseBelowZ)
+                        hueVec.Z = (float)ProfileManager.CurrentProfile.TransparentHousesTransparency / 10;
+                }
+            }
+            if (ProfileManager.CurrentProfile.InvisibleHousesEnabled)
+            {
+                GameObject tile = World.Map.GetTile(X, Y);
+
+                if (tile != null)
+                {
+                    if ((Z - World.Player.Z) > ProfileManager.CurrentProfile.InvisibleHousesZ && (Z - tile.Z) > ProfileManager.CurrentProfile.DontRemoveHouseBelowZ)
+                        //DO NOT DRAW IT
+                        return false;
+                }
+            }
+            // ## BEGIN - END ## // MISC2
+
             DrawStaticAnimated(batcher, graphic, posX, posY, hueVec, false, depth);
 
             return true;
@@ -215,17 +280,7 @@ namespace ClassicUO.Game.GameObjects
                 UsedLayer
             );
 
-            bool ishuman =
-                MathHelper.InRange(Amount, 0x0190, 0x0193)
-                || MathHelper.InRange(Amount, 0x00B7, 0x00BA)
-                || MathHelper.InRange(Amount, 0x025D, 0x0260)
-                || MathHelper.InRange(Amount, 0x029A, 0x029B)
-                || MathHelper.InRange(Amount, 0x02B6, 0x02B7)
-                || Amount == 0x03DB
-                || Amount == 0x03DF
-                || Amount == 0x03E2
-                || Amount == 0x02E8
-                || Amount == 0x02E9;
+            bool ishuman = IsHumanCorpse;
 
             DrawLayer(
                 batcher,
@@ -413,10 +468,7 @@ namespace ClassicUO.Game.GameObjects
                 }
                 else
                 {
-                    if (
-                        ProfileManager.CurrentProfile.GridLootType > 0
-                        && SelectedObject.CorpseObject == owner
-                    )
+                    if ((ProfileManager.CurrentProfile.GridLootType > 0 || ProfileManager.CurrentProfile.UseGridLayoutContainerGumps) && SelectedObject.CorpseObject == owner)
                     {
                         color = 0x0034;
                     }

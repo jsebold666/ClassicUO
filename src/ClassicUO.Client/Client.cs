@@ -34,7 +34,6 @@ using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
-using ClassicUO.IO;
 using ClassicUO.Network;
 using ClassicUO.Network.Encryption;
 using ClassicUO.Resources;
@@ -69,7 +68,9 @@ namespace ClassicUO
         public UltimaOnline()
         {
 
-        }
+            ScriptCompiler.InvokeAfterCompiling("Configure");
+
+            Load();
 
         public unsafe void Load(GameController game)
         {
@@ -107,6 +108,21 @@ namespace ClassicUO
                     (IntPtr)ptr,
                     LIGHTS_TEXTURE_WIDTH * LIGHTS_TEXTURE_HEIGHT * sizeof(uint)
                 );
+                
+                Log.Trace("Loading plugins...");
+
+                foreach (string p in Settings.GlobalSettings.Plugins)
+                {
+                    Plugin.Create(p);
+                }
+
+                Log.Trace("Done!");
+
+                UoAssist.Start();
+
+                ScriptCompiler.InvokeAfterCompiling("Initialize");
+
+                Game.Run();
             }
 
             game.GraphicsDevice.Textures[1] = hueSamplers[0];
@@ -251,10 +267,10 @@ namespace ClassicUO
                 EncryptionHelper.CalculateEncryption(Version);
                 Log.Trace($"encryption: {EncryptionHelper.Type}");
 
-                if (EncryptionHelper.Type != (ENCRYPTION_TYPE) Settings.GlobalSettings.Encryption)
+                if (EncryptionHelper.Type != (ENCRYPTION_TYPE)Settings.GlobalSettings.Encryption)
                 {
                     Log.Warn($"Encryption found: {EncryptionHelper.Type}");
-                    Settings.GlobalSettings.Encryption = (byte) EncryptionHelper.Type;
+                    Settings.GlobalSettings.Encryption = (byte)EncryptionHelper.Type;
                 }
             }
         }

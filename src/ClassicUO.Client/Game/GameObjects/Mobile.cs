@@ -30,82 +30,83 @@
 
 #endregion
 
-using System;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Gumps;
-using ClassicUO.Assets;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Collections;
 using Microsoft.Xna.Framework;
 using ClassicUO.Game.Scenes;
+using ClassicUO.Utility.Logging;
+using System;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Mobile : Entity
+    public partial class Mobile : Entity
     {
-        //private static readonly QueuedPool<Mobile> _pool = new QueuedPool<Mobile>(
-        //    Constants.PREDICTABLE_CHUNKS,
-        //    mobile =>
-        //    {
-        //        mobile.IsDestroyed = false;
-        //        mobile.Graphic = 0;
-        //        mobile.Steps.Clear();
-        //        mobile.Offset = Vector3.Zero;
-        //        mobile.SpeedMode = CharacterSpeedType.Normal;
-        //        mobile.Race = 0;
-        //        mobile.Hits = 0;
-        //        mobile.HitsMax = 0;
-        //        mobile.Mana = 0;
-        //        mobile.ManaMax = 0;
-        //        mobile.Stamina = 0;
-        //        mobile.StaminaMax = 0;
-        //        mobile.NotorietyFlag = 0;
-        //        mobile.IsRenamable = false;
-        //        mobile.Flags = 0;
-        //        mobile.IsFemale = false;
-        //        mobile.InWarMode = false;
-        //        mobile.IsRunning = false;
-        //        mobile._animationInterval = 0;
-        //        mobile.AnimationFrameCount = 0;
-        //        mobile._animationRepeateMode = 1;
-        //        mobile._animationRepeatModeCount = 1;
-        //        mobile._animationRepeat = false;
-        //        mobile.AnimationFromServer = false;
-        //        mobile._isAnimationForwardDirection = false;
-        //        mobile.LastStepSoundTime = 0;
-        //        mobile.StepSoundOffset = 0;
-        //        mobile.Title = string.Empty;
-        //        mobile._animationGroup = 0xFF;
-        //        mobile._isDead = false;
-        //        mobile._isSA_Poisoned = false;
-        //        mobile._lastAnimationIdleDelay = 0;
-        //        mobile.X = 0;
-        //        mobile.Y = 0;
-        //        mobile.Z = 0;
-        //        mobile.Direction = 0;
-        //        mobile.LastAnimationChangeTime = Time.Ticks;
-        //        mobile.TextContainer?.Clear();
-        //        mobile.HitsPercentage = 0;
-        //        mobile.IsFlipped = false;
-        //        mobile.FrameInfo = Rectangle.Empty;
-        //        mobile.ObjectHandlesStatus = ObjectHandlesStatus.NONE;
-        //        mobile.AlphaHue = 0;
-        //        mobile.AllowedToDraw = true;
-        //        mobile.IsClicked = false;
-        //        mobile.RemoveFromTile();
-        //        mobile.Clear();
-        //        mobile.Next = null;
-        //        mobile.Previous = null;
-        //        mobile.Name = null;
-        //        mobile.ExecuteAnimation = true;
-        //        mobile.HitsRequest = HitsRequestStatus.None;
-
-        //        mobile.CalculateRandomIdleTime();
-        //    }
-        //);
+        private static readonly QueuedPool<Mobile> _pool = new QueuedPool<Mobile>(
+            Constants.PREDICTABLE_CHUNKS,
+            mobile =>
+            {
+                mobile.IsDestroyed = false;
+                mobile.Graphic = 0;
+                mobile.Steps.Clear();
+                mobile.Offset = Vector3.Zero;
+                mobile.SpeedMode = CharacterSpeedType.Normal;
+                mobile.Race = 0;
+                mobile.Hits = 0;
+                mobile.HitsMax = 0;
+                mobile.Mana = 0;
+                mobile.ManaMax = 0;
+                mobile.Stamina = 0;
+                mobile.StaminaMax = 0;
+                mobile.NotorietyFlag = 0;
+                mobile.IsRenamable = false;
+                mobile.Flags = 0;
+                mobile.IsFemale = false;
+                mobile.InWarMode = false;
+                mobile.IsRunning = false;
+                mobile._animationInterval = 0;
+                mobile.AnimationFrameCount = 0;
+                mobile._animationRepeateMode = 1;
+                mobile._animationRepeatModeCount = 1;
+                mobile._animationRepeat = false;
+                mobile.AnimationFromServer = false;
+                mobile._isAnimationForwardDirection = false;
+                mobile.LastStepSoundTime = 0;
+                mobile.StepSoundOffset = 0;
+                mobile.Title = string.Empty;
+                mobile._animationGroup = 0xFF;
+                mobile._isDead = false;
+                mobile._isSA_Poisoned = false;
+                mobile._lastAnimationIdleDelay = 0;
+                mobile.X = 0;
+                mobile.Y = 0;
+                mobile.Z = 0;
+                mobile.Direction = 0;
+                mobile.LastAnimationChangeTime = Time.Ticks;
+                mobile.TextContainer?.Clear();
+                mobile.HitsPercentage = 0;
+                mobile.IsFlipped = false;
+                mobile.FrameInfo = Rectangle.Empty;
+                mobile.ObjectHandlesStatus = ObjectHandlesStatus.NONE;
+                mobile.AlphaHue = 0;
+                mobile.AllowedToDraw = true;
+                mobile.IsClicked = false;
+                mobile.RemoveFromTile();
+                mobile.Clear();
+                mobile.Next = null;
+                mobile.Previous = null;
+                mobile.Name = null;
+                mobile.ExecuteAnimation = true;
+                mobile.HitsRequest = HitsRequestStatus.None;
+                mobile.CalculateRandomIdleTime();
+                mobile.IsParalyzed = false;
+            }
+        );
 
         private static readonly byte[,] _animationIdle =
         {
@@ -142,10 +143,23 @@ namespace ClassicUO.Game.GameObjects
             CalculateRandomIdleTime();
         }
 
+
+        // ## BEGIN - END ## // HEALTHBAR
+        public uint FlashTimeTick { get; set; } = 0;
+        public ushort OldHits { get; set; } = 0;
+        // ## BEGIN - END ## // HEALTHBAR
+
         public Mobile(World world) : base(world, 0) { }
 
         public Deque<Step> Steps { get; } = new Deque<Step>(Constants.MAX_STEP_COUNT);
-        public bool IsParalyzed => (Flags & Flags.Frozen) != 0;
+        public bool IsParalyzed { get; set; }
+
+        public void SetParalyzed(bool value)
+        {
+           
+            IsParalyzed = value;
+        }
+
         public bool IsYellowHits => (Flags & Flags.YellowBar) != 0;
         public bool IsPoisoned =>
             Client.Game.UO.Version >= ClientVersion.CV_7000
@@ -428,7 +442,7 @@ namespace ClassicUO.Game.GameObjects
                 //);
 
                 AnimationGroupsType type = Client.Game.UO.Animations.GetAnimType(graphic);
-                AnimationFlags  flags = Client.Game.UO.Animations.GetAnimFlags(graphic);
+                AnimationFlags flags = Client.Game.UO.Animations.GetAnimFlags(graphic);
                 AnimationGroups animGroup = AnimationGroups.None;
 
                 bool isLowExtended = false;
@@ -948,7 +962,7 @@ namespace ClassicUO.Game.GameObjects
                 return;
             }
 
-            int offY = 0;
+            int offY = NameOverheadGump.CurrentHeight;
 
             bool health = ProfileManager.CurrentProfile.ShowMobilesHP;
             int alwaysHP = ProfileManager.CurrentProfile.MobileHPShowWhen;
@@ -1002,7 +1016,7 @@ namespace ClassicUO.Game.GameObjects
 
             for (; last != null; last = (TextObject)last.Previous)
             {
-                if (last.RenderedText != null && !last.RenderedText.IsDestroyed)
+                if (last.TextBox != null && !last.TextBox.IsDisposed)
                 {
                     if (offY == 0 && last.Time < Time.Ticks)
                     {
@@ -1010,9 +1024,9 @@ namespace ClassicUO.Game.GameObjects
                     }
 
                     last.OffsetY = offY;
-                    offY += last.RenderedText.Height;
+                    offY += last.TextBox.Height;
 
-                    last.RealScreenPosition.X = p.X - (last.RenderedText.Width >> 1);
+                    last.RealScreenPosition.X = p.X - (last.TextBox.Width >> 1);
                     last.RealScreenPosition.Y = p.Y - offY;
                 }
             }
@@ -1026,53 +1040,53 @@ namespace ClassicUO.Game.GameObjects
             {
                 case 0x0190:
                 case 0x0192:
-                {
-                    IsFemale = false;
-                    Race = RaceType.HUMAN;
+                    {
+                        IsFemale = false;
+                        Race = RaceType.HUMAN;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x0191:
                 case 0x0193:
-                {
-                    IsFemale = true;
-                    Race = RaceType.HUMAN;
+                    {
+                        IsFemale = true;
+                        Race = RaceType.HUMAN;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x025D:
-                {
-                    IsFemale = false;
-                    Race = RaceType.ELF;
+                    {
+                        IsFemale = false;
+                        Race = RaceType.ELF;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x025E:
-                {
-                    IsFemale = true;
-                    Race = RaceType.ELF;
+                    {
+                        IsFemale = true;
+                        Race = RaceType.ELF;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x029A:
-                {
-                    IsFemale = false;
-                    Race = RaceType.GARGOYLE;
+                    {
+                        IsFemale = false;
+                        Race = RaceType.GARGOYLE;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x029B:
-                {
-                    IsFemale = true;
-                    Race = RaceType.GARGOYLE;
+                    {
+                        IsFemale = true;
+                        Race = RaceType.GARGOYLE;
 
-                    break;
-                }
+                        break;
+                    }
             }
         }
 
@@ -1087,12 +1101,13 @@ namespace ClassicUO.Game.GameObjects
             if (!(this is PlayerMobile))
             {
                 UIManager.GetGump<PaperDollGump>(serial)?.Dispose();
+                UIManager.GetGump<ModernPaperdoll>(serial)?.Dispose();
 
                 //_pool.ReturnOne(this);
             }
         }
 
-        internal struct Step
+        public struct Step
         {
             public int X,
                 Y;

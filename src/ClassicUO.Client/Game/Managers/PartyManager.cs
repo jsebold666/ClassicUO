@@ -36,12 +36,15 @@ using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.IO;
-using ClassicUO.Network;
 using ClassicUO.Resources;
 
 namespace ClassicUO.Game.Managers
 {
+<<<<<<< HEAD
     internal sealed class PartyManager
+=======
+    public class PartyManager
+>>>>>>> dev_dust765_to_main
     {
         private const int PARTY_SIZE = 10;
 
@@ -247,7 +250,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal class PartyMember : IEquatable<PartyMember>
+    public class PartyMember : IEquatable<PartyMember>
     {
         private readonly World _world;
         private string _name;

@@ -52,13 +52,22 @@ namespace ClassicUO.Game.UI.Gumps
     {
         private AlphaBlendControl _background;
 
+        public static CounterBarGump CurrentCounterBarGump { get; private set; }
+
         private int _rows,
             _columns,
             _rectSize;
 
         //private bool _isVertical;
 
+<<<<<<< HEAD
         public CounterBarGump(World world) : base(world, 0, 0) { }
+=======
+        public CounterBarGump() : base(0, 0) 
+        {
+            CurrentCounterBarGump = this;
+        }
+>>>>>>> dev_dust765_to_main
 
         public CounterBarGump(
             World world,
@@ -97,6 +106,8 @@ namespace ClassicUO.Game.UI.Gumps
             //_isVertical = vertical;
 
             BuildGump();
+
+            CurrentCounterBarGump = this;
         }
 
         public override GumpType GumpType => GumpType.CounterBar;
@@ -250,13 +261,30 @@ namespace ClassicUO.Game.UI.Gumps
 
                 if (index >= 0 && index < items.Length)
                 {
-                    items[i].Parent = null;
+                     items[i].Parent = null;
 
                     items[i].Dispose();
                 }
             }
 
             SetInScreen();
+        }
+
+        public CounterItem GetCounterItem(int index)
+        {
+            CounterItem[] items = GetControls<CounterItem>();
+
+            if(items == null)
+            {
+                return null;
+            }
+
+            if(items.Length > index)
+            {
+                return items[index];
+            }
+
+            return null;
         }
 
         public override void Save(XmlTextWriter writer)
@@ -318,12 +346,27 @@ namespace ClassicUO.Game.UI.Gumps
             IsEnabled = IsVisible = ProfileManager.CurrentProfile.CounterBarEnabled;
         }
 
-        private class CounterItem : Control
+        public override void Dispose()
+        {
+            if (CurrentCounterBarGump == this)
+            {
+                CurrentCounterBarGump = null;
+            }
+            base.Dispose();
+        }
+
+        public class CounterItem : Control
         {
             private int _amount;
             private readonly ImageWithText _image;
             private uint _time;
+<<<<<<< HEAD
             private readonly CounterBarGump _gump;
+=======
+            private const uint HIGHLIGHT_DURATION = 1000;
+            private uint _endHighlight;
+            private bool _highlight;
+>>>>>>> dev_dust765_to_main
 
             public CounterItem(CounterBarGump gump, int x, int y, int w, int h)
             {
@@ -484,6 +527,17 @@ namespace ClassicUO.Game.UI.Gumps
                             }
                         }
 
+                        if (ProfileManager.CurrentProfile.CounterBarHighlightOnUse)
+                        {
+                            if (int.TryParse(_image.GetText(), out int cAmt))
+                            {
+                                if (cAmt > _amount)
+                                {
+                                    _highlight = true;
+                                    _endHighlight = Time.Ticks + HIGHLIGHT_DURATION;
+                                }
+                            }
+                        }
                         _image.SetAmount(_amount.ToString());
                     }
                 }
@@ -524,6 +578,19 @@ namespace ClassicUO.Game.UI.Gumps
                 );
 
                 Vector3 hueVector = ShaderHueTranslator.GetHueVector(0);
+
+                if (_highlight && Time.Ticks > _endHighlight)
+                {
+                    _highlight = false;
+                }
+
+                if (_highlight)
+                {
+                    hueVector.Z = ((float)_endHighlight - (float)Time.Ticks) / (float)HIGHLIGHT_DURATION;
+                    batcher.Draw(SolidColorTextureCache.GetTexture(Color.Yellow), new Rectangle(x, y, Width, Height), hueVector);
+                }
+
+                hueVector.Z = 1;
 
                 batcher.DrawRectangle(color, x, y, Width, Height, hueVector);
 
@@ -621,6 +688,11 @@ namespace ClassicUO.Game.UI.Gumps
                 public void SetAmount(string amount)
                 {
                     _label.Text = amount;
+                }
+
+                public string GetText()
+                {
+                    return _label?.Text ?? "";
                 }
             }
         }

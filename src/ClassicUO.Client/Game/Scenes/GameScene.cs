@@ -30,18 +30,18 @@
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
+// ## BEGIN - END ## // UI/GUMPS
+using ClassicUO.Dust765.External;
+using ClassicUO.Dust765.Dust765;
+// ## BEGIN - END ## // UI/GUMPS
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
-using ClassicUO.Game.UI.Controls;
+using ClassicUO.Game.UI;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Network;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
@@ -50,6 +50,9 @@ using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SDL2;
+using System;
+using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace ClassicUO.Game.Scenes
 {
@@ -81,6 +84,12 @@ namespace ClassicUO.Game.Scenes
         private long _alphaTimer;
         private bool _forceStopScene;
         private HealthLinesManager _healthLinesManager;
+        // ## BEGIN - END ## // TEXTUREMANAGER
+        private TextureManager _textureManager;
+        // ## BEGIN - END ## // TEXTUREMANAGER
+        // ## BEGIN - END ## // LINES
+        private UOClassicCombatLines _UOClassicCombatLines;
+        // ## BEGIN - END ## // LINES
 
         private Point _lastSelectedMultiPositionInHouseCustomization;
         private int _lightCount;
@@ -118,6 +127,19 @@ namespace ClassicUO.Game.Scenes
             ProfileManager.CurrentProfile != null
             && ProfileManager.CurrentProfile.UseAlternativeLights;
 
+        private bool _followingMode
+        {
+            get { return ProfileManager.CurrentProfile.FollowingMode; }
+            set { ProfileManager.CurrentProfile.FollowingMode = value; }
+        }
+        private uint _followingTarget
+        {
+            get { return ProfileManager.CurrentProfile.FollowingTarget; }
+            set { ProfileManager.CurrentProfile.FollowingTarget = value; }
+        }
+
+        private uint _lastResync = Time.Ticks;
+
         public void DoubleClickDelayed(uint serial)
         {
             _useItemQueue.Add(serial);
@@ -126,6 +148,8 @@ namespace ClassicUO.Game.Scenes
         public override void Load()
         {
             base.Load();
+
+            UISettings.Preload();
 
             Client.Game.Window.AllowUserResizing = true;
 
@@ -139,6 +163,16 @@ namespace ClassicUO.Game.Scenes
 
             _world.Macros.Clear();
             _world.Macros.Load();
+            
+            NameOverHeadManager.Load();
+
+            // ## BEGIN - END ## // TEXTUREMANAGER
+            _textureManager = new TextureManager();
+            // ## BEGIN - END ## // TEXTUREMANAGER
+            // ## BEGIN - END ## // LINES
+            _UOClassicCombatLines = new UOClassicCombatLines();
+            // ## BEGIN - END ## // LINES
+
             _animatedStaticsManager = new AnimatedStaticsManager();
             _animatedStaticsManager.Initialize();
             _world.InfoBars.Load();
@@ -155,7 +189,11 @@ namespace ClassicUO.Game.Scenes
             }
 
             NetClient.Socket.Disconnected += SocketOnDisconnected;
+<<<<<<< HEAD
             _world.MessageManager.MessageReceived += ChatOnMessageReceived;
+=======
+            EventSink.MessageReceived += ChatOnMessageReceived;
+>>>>>>> dev_dust765_to_main
             UIManager.ContainerScale = ProfileManager.CurrentProfile.ContainersScale / 100f;
 
             SDL.SDL_SetWindowMinimumSize(Client.Game.Window.Handle, 640, 480);
@@ -179,7 +217,108 @@ namespace ClassicUO.Game.Scenes
                 Client.Game.SetWindowSize(w, h);
             }
 
+<<<<<<< HEAD
+=======
+            // ## BEGIN - END ## // UI/GUMPS
+            if (ProfileManager.CurrentProfile.UOClassicCombatLTBar)
+            {
+                UIManager.Add(new UOClassicCombatLTBar
+                {
+                    X = ProfileManager.CurrentProfile.UOClassicCombatLTBarLocation.X,
+                    Y = ProfileManager.CurrentProfile.UOClassicCombatLTBarLocation.Y
+                });
+
+            }
+            if (ProfileManager.CurrentProfile.BandageGump)
+            {
+                UIManager.Add(new BandageGump());
+            }
+            // ## BEGIN - END ## // UI/GUMPS
+            // ## BEGIN - END ## // LINES
+            if (ProfileManager.CurrentProfile.UOClassicCombatLines)
+            {
+                UIManager.Add(new UOClassicCombatLines
+                {
+                    X = ProfileManager.CurrentProfile.UOClassicCombatLinesLocation.X,
+                    Y = ProfileManager.CurrentProfile.UOClassicCombatLinesLocation.Y
+                });
+
+            }
+            // ## BEGIN - END ## // LINES
+            // ## BEGIN - END ## // AUTOLOOT
+            if (ProfileManager.CurrentProfile.UOClassicCombatAL)
+            {
+                UIManager.Add(new UOClassicCombatAL
+                {
+                    X = ProfileManager.CurrentProfile.UOClassicCombatALLocation.X,
+                    Y = ProfileManager.CurrentProfile.UOClassicCombatALLocation.Y
+                });
+
+            }
+            // ## BEGIN - END ## // AUTOLOOT
+            // ## BEGIN - END ## // BUFFBAR/UCCSETTINGS
+            if (ProfileManager.CurrentProfile.UOClassicCombatBuffbar)
+            {
+                UIManager.Add(new UOClassicCombatBuffbar
+                {
+                    X = ProfileManager.CurrentProfile.UOClassicCombatBuffbarLocation.X,
+                    Y = ProfileManager.CurrentProfile.UOClassicCombatBuffbarLocation.Y
+                });
+
+            }
+            // ## BEGIN - END ## // BUFFBAR/UCCSETTINGS
+            // ## BEGIN - END ## // SELF
+            if (ProfileManager.CurrentProfile.UOClassicCombatSelf)
+            {
+                UIManager.Add(new UOClassicCombatSelf
+                {
+                    X = ProfileManager.CurrentProfile.UOClassicCombatSelfLocation.X,
+                    Y = ProfileManager.CurrentProfile.UOClassicCombatSelfLocation.Y
+                });
+
+            }
+            // ## BEGIN - END ## // SELF
+             // ## BEGIN - END ## // AUTOMATIONS
+            ModulesManager.Load();
+            // ## BEGIN - END ## // AUTOMATIONS
+            // ## BEGIN - END ## // ONCASTINGGUMP
+            if (ProfileManager.CurrentProfile.OnCastingGump)
+            {
+                if (World.Player.OnCasting == null)
+                {
+                    UIManager.Add(World.Player.OnCasting = new OnCastingGump());
+                }
+            }
+            // ## BEGIN - END ## // ONCASTINGGUMP
+
+            CircleOfTransparency.Create(ProfileManager.CurrentProfile.CircleOfTransparencyRadius);
+>>>>>>> dev_dust765_to_main
             Plugin.OnConnected();
+            EventSink.InvokeOnConnected(null);
+            GameController.UpdateBackgroundHueShader();
+            SpellDefinition.LoadCustomSpells();
+            SpellVisualRangeManager.Instance.OnSceneLoad();
+            OnCastingGump.OnSceneLoad();
+            AutoLootManager.Instance.OnSceneLoad();
+            if (!UpdateManager.SkipUpdateCheck && UpdateManager.HasUpdate)
+            {
+                UpdateManager.SendDelayedUpdateMessage();
+            }
+            else if (!UpdateManager.SkipUpdateCheck)
+            {
+                UpdateManager.UpdateStatusChanged += (s, e) =>
+                {
+                    if (UpdateManager.HasUpdate)
+                    {
+                        UpdateManager.SendDelayedUpdateMessage();
+                    }
+                };
+            }
+
+            foreach (var xml in ProfileManager.CurrentProfile.AutoOpenXmlGumps)
+            {
+                XmlGumpHandler.TryAutoOpenByName(xml);
+            }
         }
 
         private void ChatOnMessageReceived(object sender, MessageEventArgs e)
@@ -196,6 +335,10 @@ namespace ClassicUO.Game.Scenes
 
             switch (e.Type)
             {
+                case MessageType.ChatSystem:
+                    name = e.Name;
+                    text = e.Text;
+                    break;
                 case MessageType.Regular:
                 case MessageType.Limit3Spell:
 
@@ -294,9 +437,23 @@ namespace ClassicUO.Game.Scenes
                     break;
             }
 
+            
+
             if (!string.IsNullOrEmpty(text))
             {
+<<<<<<< HEAD
                 _world.Journal.Add(text, hue, name, e.TextType, e.IsUnicode);
+=======
+                World.Journal.Add
+                (
+                    text,
+                    hue,
+                    name,
+                    e.TextType,
+                    e.IsUnicode,
+                    e.Type
+                );
+>>>>>>> dev_dust765_to_main
             }
         }
 
@@ -329,12 +486,29 @@ namespace ClassicUO.Game.Scenes
             }
             catch { }
 
+<<<<<<< HEAD
             _world.TargetManager.Reset();
+=======
+            EventSink.InvokeOnDisconnected(null);
+
+            TargetManager.Reset();
+>>>>>>> dev_dust765_to_main
 
             // special case for wmap. this allow us to save settings
             UIManager.GetGump<WorldMapGump>()?.SaveSettings();
 
+<<<<<<< HEAD
             ProfileManager.CurrentProfile?.Save(_world, ProfileManager.ProfilePath);
+=======
+            ProfileManager.CurrentProfile?.Save(ProfileManager.ProfilePath);
+            TileMarkerManager.Instance.Save();
+            SpellVisualRangeManager.Instance.Save();
+            SpellVisualRangeManager.Instance.OnSceneUnload();
+            OnCastingGump.OnSceneUnload();
+            AutoLootManager.Instance.Save();
+
+            NameOverHeadManager.Save();
+>>>>>>> dev_dust765_to_main
 
             _world.Macros.Save();
             _world.Macros.Clear();
@@ -357,7 +531,14 @@ namespace ClassicUO.Game.Scenes
             _world.DelayedObjectClickManager.Clear();
 
             _useItemQueue?.Clear();
+<<<<<<< HEAD
             _world.MessageManager.MessageReceived -= ChatOnMessageReceived;
+=======
+            _useItemQueue = null;
+            Hotkeys = null;
+            Macros = null;
+            EventSink.MessageReceived -= ChatOnMessageReceived;
+>>>>>>> dev_dust765_to_main
 
             Settings.GlobalSettings.WindowSize = new Point(
                 Client.Game.Window.ClientBounds.Width,
@@ -617,13 +798,22 @@ namespace ClassicUO.Game.Scenes
 
             GetViewPort();
 
+<<<<<<< HEAD
             var useObjectHandles = _world.NameOverHeadManager.IsToggled || Keyboard.Ctrl && Keyboard.Shift;
+=======
+            var useObjectHandles = NameOverHeadManager.IsShowing;
+>>>>>>> dev_dust765_to_main
             if (useObjectHandles != _useObjectHandles)
             {
                 _useObjectHandles = useObjectHandles;
                 if (_useObjectHandles)
                 {
+<<<<<<< HEAD
                     _world.NameOverHeadManager.Open();
+=======
+                    NameOverHeadManager.Open();
+
+>>>>>>> dev_dust765_to_main
                 }
                 else
                 {
@@ -770,13 +960,25 @@ namespace ClassicUO.Game.Scenes
                 _timePing = (long)Time.Ticks + 1000;
             }
 
+<<<<<<< HEAD
             _world.Update();
+=======
+            if (currentProfile.ForceResyncOnHang && Time.Ticks - NetClient.Socket.Statistics.LastPingReceived > 5000 && Time.Ticks - _lastResync > 5000)
+            {
+                //Last ping > ~5 seconds
+                NetClient.Socket.Send_Resync();
+                _lastResync = Time.Ticks;
+                GameActions.Print("Possible connection hang, resync attempted", 32, MessageType.System);
+            }
+
+            World.Update();
+>>>>>>> dev_dust765_to_main
             _animatedStaticsManager.Process();
             _world.BoatMovingManager.Update();
             _world.Player.Pathfinder.ProcessAutoWalk();
             _world.DelayedObjectClickManager.Update();
 
-            if (!MoveCharacterByMouseInput() && !currentProfile.DisableArrowBtn)
+            if (!MoveCharacterByMouseInput() && !currentProfile.DisableArrowBtn && !MoveCharByController())
             {
                 Direction dir = DirectionHelper.DirectionFromKeyboardArrows(
                     _flags[0],
@@ -791,11 +993,17 @@ namespace ClassicUO.Game.Scenes
                 }
             }
 
+<<<<<<< HEAD
             if (
                 _followingMode && SerialHelper.IsMobile(_followingTarget) && !_world.Player.Pathfinder.AutoWalking
             )
             {
                 Mobile follow = _world.Mobiles.Get(_followingTarget);
+=======
+            if (currentProfile.FollowingMode && SerialHelper.IsMobile(currentProfile.FollowingTarget) && !Pathfinder.AutoWalking)
+            {
+                Mobile follow = World.Mobiles.Get(currentProfile.FollowingTarget);
+>>>>>>> dev_dust765_to_main
 
                 if (follow != null)
                 {
@@ -805,9 +1013,16 @@ namespace ClassicUO.Game.Scenes
                     {
                         StopFollowing();
                     }
-                    else if (distance > 3)
+                    else if (distance > currentProfile.AutoFollowDistance)
                     {
+<<<<<<< HEAD
                         _world.Player.Pathfinder.WalkTo(follow.X, follow.Y, follow.Z, 1);
+=======
+                        if (!Pathfinder.WalkTo(follow.X, follow.Y, follow.Z, currentProfile.AutoFollowDistance) && !World.Player.IsParalyzed)
+                        {
+                            StopFollowing(); //Can't get there
+                        }
+>>>>>>> dev_dust765_to_main
                     }
                 }
                 else
@@ -1271,6 +1486,12 @@ namespace ClassicUO.Game.Scenes
 
         public void DrawOverheads(UltimaBatcher2D batcher)
         {
+            // ## BEGIN - END ## // TEXTUREMANAGER
+            _textureManager.Draw(batcher);
+            // ## BEGIN - END ## // TEXTUREMANAGER
+            // ## BEGIN - END ## // LINES
+            _UOClassicCombatLines.Draw(batcher);
+            // ## BEGIN - END ## // LINES
             _healthLinesManager.Draw(batcher);
 
             if (!UIManager.IsMouseOverWorld)
@@ -1358,11 +1579,17 @@ namespace ClassicUO.Game.Scenes
 
         private void StopFollowing()
         {
-            if (_followingMode)
+            if (ProfileManager.CurrentProfile.FollowingMode)
             {
+<<<<<<< HEAD
                 _followingMode = false;
                 _followingTarget = 0;
                 _world.Player.Pathfinder.StopAutoWalk();
+=======
+                ProfileManager.CurrentProfile.FollowingMode = false;
+                ProfileManager.CurrentProfile.FollowingTarget = 0;
+                Pathfinder.StopAutoWalk();
+>>>>>>> dev_dust765_to_main
 
                 _world.MessageManager.HandleMessage(
                     _world.Player,

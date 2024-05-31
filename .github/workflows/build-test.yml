@@ -26,10 +26,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-       os: [ macos-latest, ubuntu-latest, windows-latest ]
+       os: [ windows-latest, macos-latest, ubuntu-latest ]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       
     - name: Get submodules
       run: |
@@ -37,10 +37,16 @@ jobs:
         git submodule update --init --recursive
         
     - name: Setup .NET 8
+<<<<<<< HEAD
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 8.0.x
         include-prerelease: true
+=======
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+>>>>>>> dev_dust765_to_main
         
     - name: Restore
       run: dotnet restore

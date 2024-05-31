@@ -33,6 +33,10 @@
 using System;
 using System.Collections.Generic;
 using ClassicUO.Game.Data;
+// ## BEGIN - END ## // ART / HUE CHANGES
+using ClassicUO.Dust765.Dust765;
+using ClassicUO.Configuration;
+// ## BEGIN - END ## // ART / HUE CHANGES
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Gumps;
@@ -43,10 +47,11 @@ using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
 using ClassicUO.Utility.Platforms;
 using Microsoft.Xna.Framework;
+using MathHelper = ClassicUO.Utility.MathHelper;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Item : Entity
+    public partial class Item : Entity
     {
         //private static readonly QueuedPool<Item> _pool = new QueuedPool<Item>(
         //    Constants.PREDICTABLE_CHUNKS * 3,
@@ -115,18 +120,41 @@ namespace ClassicUO.Game.GameObjects
                     return _displayedGraphic.Value;
                 }
 
+                // ## BEGIN - END ## // ART / HUE CHANGES
+                /*
                 if (IsCoin)
                 {
                     if (Amount > 5)
                     {
-                        return (ushort)(Graphic + 2);
+                        return (ushort) (Graphic + 2);
                     }
-
                     if (Amount > 1)
                     {
-                        return (ushort)(Graphic + 1);
+                        return (ushort) (Graphic + 1);
                     }
                 }
+                */
+                // ## BEGIN - END ## // ART / HUE CHANGES
+                if (IsCoin)
+                {
+                    if (ProfileManager.CurrentProfile.GoldType == 0) // normal
+                    {
+                        if (Amount > 5)
+                            return (ushort)(Graphic + 2);
+                        if (Amount > 1)
+                            return (ushort)(Graphic + 1);
+                    }
+                    else
+                    {
+                        Graphic = CombatCollection.GoldArt(Graphic);
+                    }
+
+                    if (ProfileManager.CurrentProfile.ColorGold)
+                    {
+                        Hue = CombatCollection.GoldHue(Hue);
+                    }
+                }
+                // ## BEGIN - END ## // ART / HUE CHANGES
                 else if (IsMulti)
                 {
                     return MultiGraphic;
@@ -160,6 +188,18 @@ namespace ClassicUO.Game.GameObjects
 
         public bool IsCorpse => /*MathHelper.InRange(Graphic, 0x0ECA, 0x0ED2) ||*/
             Graphic == 0x2006;
+
+        public bool IsHumanCorpse => IsCorpse && 
+            MathHelper.InRange(Amount, 0x0190, 0x0193) || 
+            MathHelper.InRange(Amount, 0x00B7, 0x00BA) || 
+            MathHelper.InRange(Amount, 0x025D, 0x0260) || 
+            MathHelper.InRange(Amount, 0x029A, 0x029B) || 
+            MathHelper.InRange(Amount, 0x02B6, 0x02B7) || 
+            Amount == 0x03DB || 
+            Amount == 0x03DF || 
+            Amount == 0x03E2 || 
+            Amount == 0x02E8 || 
+            Amount == 0x02E9;
 
         public bool OnGround => !SerialHelper.IsValid(Container);
 
@@ -224,6 +264,9 @@ namespace ClassicUO.Game.GameObjects
             if (Opened)
             {
                 UIManager.GetGump<ContainerGump>(Serial)?.Dispose();
+                #region GridContainer
+                UIManager.GetGump<GridContainer>(Serial)?.Dispose();
+                #endregion
                 UIManager.GetGump<SpellbookGump>(Serial)?.Dispose();
                 UIManager.GetGump<MapGump>(Serial)?.Dispose();
 
@@ -675,7 +718,7 @@ namespace ClassicUO.Game.GameObjects
 
                 for (; last != null; last = (TextObject)last.Previous)
                 {
-                    if (last.RenderedText != null && !last.RenderedText.IsDestroyed)
+                    if (last.TextBox != null && !last.TextBox.IsDisposed)
                     {
                         if (offY == 0 && last.Time < Time.Ticks)
                         {
@@ -683,9 +726,9 @@ namespace ClassicUO.Game.GameObjects
                         }
 
                         last.OffsetY = offY;
-                        offY += last.RenderedText.Height;
+                        offY += last.TextBox.Height;
 
-                        last.RealScreenPosition.X = p.X - (last.RenderedText.Width >> 1);
+                        last.RealScreenPosition.X = p.X - (last.TextBox.Width >> 1);
                         last.RealScreenPosition.Y = p.Y - offY;
                     }
                 }
@@ -696,7 +739,7 @@ namespace ClassicUO.Game.GameObjects
             {
                 for (; last != null; last = (TextObject)last.Previous)
                 {
-                    if (last.RenderedText != null && !last.RenderedText.IsDestroyed)
+                    if (last.TextBox != null && !last.TextBox.IsDisposed)
                     {
                         if (offY == 0 && last.Time < Time.Ticks)
                         {
@@ -704,9 +747,9 @@ namespace ClassicUO.Game.GameObjects
                         }
 
                         last.OffsetY = offY;
-                        offY += last.RenderedText.Height;
+                        offY += last.TextBox.Height;
 
-                        last.RealScreenPosition.X = last.X - (last.RenderedText.Width >> 1);
+                        last.RealScreenPosition.X = last.X - (last.TextBox.Width >> 1);
                         last.RealScreenPosition.Y = last.Y - offY;
                     }
                 }

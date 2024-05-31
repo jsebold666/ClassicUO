@@ -1383,7 +1383,15 @@ namespace ClassicUO.Resources {
                 return ResourceManager.GetString("EnablePathfinding", resourceCulture);
             }
         }
-        
+
+        public static string enableTabGridGump
+        {
+            get
+            {
+                return ResourceManager.GetString("enableTabGridGump", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Enemy Color.
         /// </summary>
@@ -2417,6 +2425,15 @@ namespace ClassicUO.Resources {
         public static string Luck {
             get {
                 return ResourceManager.GetString("Luck", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Button Editor.
+        /// </summary>
+        public static string MacroButtonEditor {
+            get {
+                return ResourceManager.GetString("MacroButtonEditor", resourceCulture);
             }
         }
         

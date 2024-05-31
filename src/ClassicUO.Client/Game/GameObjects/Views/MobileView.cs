@@ -30,22 +30,24 @@
 
 #endregion
 
-using System;
-using System.Collections.Generic;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
+// ## BEGIN - END ## // VISUAL HELPERS
+using ClassicUO.Dust765.Dust765;
+// ## BEGIN - END ## // VISUAL HELPERS
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
-using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Mobile
+    public partial class Mobile
     {
         private const int SIT_OFFSET_Y = 4;
         private static EquipConvData? _equipConvData;
@@ -54,6 +56,9 @@ namespace ClassicUO.Game.GameObjects
         private static int _startCharacterKneesY;
         private static int _startCharacterFeetY;
         private static int _characterFrameHeight;
+        // ## BEGIN - END ## // OVERHEAD / UNDERCHAR
+        public RenderedText RangeTexture { get; set; }
+        // ## BEGIN - END ## // OVERHEAD / UNDERCHAR
 
         public override bool Draw(UltimaBatcher2D batcher, int posX, int posY, float depth)
         {
@@ -80,14 +85,23 @@ namespace ClassicUO.Game.GameObjects
             drawY += 22;
 
             bool hasShadow = !IsDead && !IsHidden && ProfileManager.CurrentProfile.ShadowsEnabled;
+            bool inParty = World.Party.Contains(this);
 
             if (World.AuraManager.IsEnabled)
             {
-                World.AuraManager.Draw(
+                // ## BEGIN - END ## // VISUAL HELPERS
+                if (this == World.Player && ProfileManager.CurrentProfile.OwnAuraByHP)
+                {
+                    ushort color = CombatCollection.OwnAuraColorByHP();
+                    AuraManager.Draw(batcher, drawX, drawY, color, depth + 1f);
+                }
+                else
+                    // ## BEGIN - END ## // VISUAL HELPERS
+                    AuraManager.Draw(
                     batcher,
                     drawX,
                     drawY,
-                    ProfileManager.CurrentProfile.PartyAura && World.Party.Contains(this)
+                    ProfileManager.CurrentProfile.PartyAura && inParty
                         ? ProfileManager.CurrentProfile.PartyAuraHue
                         : Notoriety.GetHue(NotorietyFlag),
                     depth + 1f
@@ -102,13 +116,29 @@ namespace ClassicUO.Game.GameObjects
 
             Vector3 hueVec = ShaderHueTranslator.GetHueVector(0, false, AlphaHue / 255f);
 
-            if (
-                ProfileManager.CurrentProfile.HighlightGameObjects
-                && ReferenceEquals(SelectedObject.Object, this)
-            )
+            if (World.Player == this && ProfileManager.CurrentProfile.PlayerConstantAlpha != 100)
             {
+                hueVec = ShaderHueTranslator.GetHueVector(0, false, (float)ProfileManager.CurrentProfile.PlayerConstantAlpha / 100f);
+            }
+
+            if (ProfileManager.CurrentProfile.HighlightGameObjects && ReferenceEquals(SelectedObject.Object, this))
+            {
+                // ## BEGIN - END ## // VISUAL HELPERS
+                /*
                 overridedHue = Constants.HIGHLIGHT_CURRENT_OBJECT_HUE;
                 hueVec.Y = 1;
+                */
+                // ## BEGIN - END ## // VISUAL HELPERS
+                Item item = World.Items.Get(Serial);
+
+                if (this == item)
+                {
+                    overridedHue = Constants.HIGHLIGHT_CURRENT_OBJECT_HUE;
+                    hueVec.Y = 1;
+                }
+                else
+                    overridedHue = Notoriety.GetHue(NotorietyFlag);
+                // ## BEGIN - END ## // VISUAL HELPERS
             }
             else if (SelectedObject.HealthbarObject == this)
             {
@@ -129,7 +159,8 @@ namespace ClassicUO.Game.GameObjects
             }
             else if (IsHidden)
             {
-                overridedHue = 0x038E;
+                overridedHue = ProfileManager.CurrentProfile.HiddenBodyHue;
+                hueVec = ShaderHueTranslator.GetHueVector(0, false, ((float)ProfileManager.CurrentProfile.HiddenBodyAlpha / 100));
             }
             else
             {
@@ -146,18 +177,30 @@ namespace ClassicUO.Game.GameObjects
                 {
                     if (ProfileManager.CurrentProfile.HighlightMobilesByPoisoned)
                     {
-                        if (IsPoisoned)
+                        if (IsPoisoned || _isSA_Poisoned)
                         {
-                            overridedHue = ProfileManager.CurrentProfile.PoisonHue;
+                            overridedHue = CombatCollection.LastTargetHue(this, ProfileManager.CurrentProfile.PoisonHue);
+                            hueVec.Y = 1;
+                        }
+                    } 
+                    if (ProfileManager.CurrentProfile.HighlightMobilesByParalize)
+                    {
+                        if (IsParalyzed && NotorietyFlag != NotorietyFlag.Invulnerable) 
+                        {
+                            overridedHue = CombatCollection.LastTargetHue(this, ProfileManager.CurrentProfile.ParalyzedHue);
+                            hueVec.Y = 1;
                         }
                     }
-                    if (ProfileManager.CurrentProfile.HighlightMobilesByParalize)
+
+                    if (!ProfileManager.CurrentProfile.HighlightMobilesByParalize)
                     {
                         if (IsParalyzed && NotorietyFlag != NotorietyFlag.Invulnerable)
                         {
-                            overridedHue = ProfileManager.CurrentProfile.ParalyzedHue;
+                            overridedHue = CombatCollection.LastTargetHue(this, ProfileManager.CurrentProfile.ParalyzedHue);
+                            hueVec.Y = 1;
                         }
                     }
+
                     if (ProfileManager.CurrentProfile.HighlightMobilesByInvul)
                     {
                         if (NotorietyFlag != NotorietyFlag.Invulnerable && IsYellowHits)
@@ -178,7 +221,27 @@ namespace ClassicUO.Game.GameObjects
                 {
                     overridedHue = Notoriety.GetHue(NotorietyFlag);
                 }
+                else if (inParty && ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.OverridePartyAndGuildHue)
+                {
+                    overridedHue = ProfileManager.CurrentProfile.FriendHue;
+                }
             }
+
+            // ## BEGIN - END ## // VISUAL HELPERS
+            if (ProfileManager.CurrentProfile.HighlightLastTargetType != 0 && World.Get(TargetManager.LastTargetInfo.Serial) == this)
+            {
+                overridedHue = CombatCollection.LastTargetHue(this, overridedHue);
+                hueVec.Y = 1;
+            }
+            if (ProfileManager.CurrentProfile.PreviewFields)
+            {
+                if (CombatCollection.MobileFieldPreview(this))
+                {
+                    overridedHue = 0x0040;
+                    hueVec.Y = 1;
+                }
+            }
+            // ## BEGIN - END ## // VISUAL HELPERS
 
             ProcessSteps(out byte dir);
             byte layerDir = dir;
@@ -395,6 +458,11 @@ namespace ClassicUO.Game.GameObjects
 
                     if (isHuman)
                     {
+                        if (ProfileManager.CurrentProfile.HiddenLayers.Contains((int)layer) && ((ProfileManager.CurrentProfile.HideLayersForSelf && Serial == World.Player.Serial) || !ProfileManager.CurrentProfile.HideLayersForSelf))
+                        {
+                            continue;
+                        }
+
                         if (IsCovered(this, layer))
                         {
                             continue;
@@ -402,6 +470,14 @@ namespace ClassicUO.Game.GameObjects
 
                         if (item.ItemData.AnimID != 0)
                         {
+                            // ## BEGIN - END ## // VISUAL HELPERS
+                            if (ProfileManager.CurrentProfile.GlowingWeaponsType != 0)
+                            {
+                                if (graphic >= 0x263 && graphic <= 0x28D) // all weps
+                                    item.Hue = CombatCollection.WeaponsHue(item.Hue);
+                            }
+                            // ## BEGIN - END ## // VISUAL HELPERS
+
                             graphic = item.ItemData.AnimID;
 
                             if (isGargoyle)
@@ -785,6 +861,14 @@ namespace ClassicUO.Game.GameObjects
                     }
                 }
 
+                // ## BEGIN - END ## // VISUAL HELPERS
+                if (ProfileManager.CurrentProfile.GlowingWeaponsType != 0)
+                {
+                    if (id >= 0x263 && id <= 0x28D) // all weps
+                        hue = CombatCollection.WeaponsHue(hue);
+                }
+                // ## BEGIN - END ## // VISUAL HELPERS
+
                 hueVec = ShaderHueTranslator.GetHueVector(hue, partialHue, hueVec.Z);
 
                 if (spriteInfo.Texture != null)
@@ -1044,9 +1128,7 @@ namespace ClassicUO.Game.GameObjects
 
                         if (
                             GetTexture(
-                                mountGraphic,
-                                animGroupMount,
-                                ref animIndex,
+                                graphic, animGroup, ref animIndex,
                                 dir,
                                 out spriteInfo,
                                 out isUop
@@ -1357,10 +1439,10 @@ namespace ClassicUO.Game.GameObjects
 
                     break;
 
-                /*case Layer.Skirt:
-                    skirt = mobile.FindItemByLayer( Layer.Skirt];
+                    /*case Layer.Skirt:
+                        skirt = mobile.FindItemByLayer( Layer.Skirt];
 
-                    break;*/
+                        break;*/
             }
 
             return false;

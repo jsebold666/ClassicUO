@@ -30,6 +30,8 @@
 
 #endregion
 
+using System;
+using Microsoft.Extensions.Caching.Memory;
 using System.Collections.Generic;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
@@ -41,45 +43,66 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal class WMapEntity
+    public class WMapEntity
     {
-        public WMapEntity(uint serial)
-        {
-            Serial = serial;
-
-            //var mob = World.Mobiles.Get(serial);
-
-            //if (mob != null)
-            //    GetName();
-        }
-
         public bool IsGuild;
         public uint LastUpdate;
         public string Name;
         public readonly uint Serial;
         public int X, Y, HP, Map;
+        public static readonly Dictionary<uint, string> nameCache = new Dictionary<uint, string>();
 
-        //public string GetName()
-        //{
-        //    Entity e = World.Get(Serial);
+        public WMapEntity(uint serial)
+        {
+            Serial = serial;
 
-        //    if (e != null && !e.IsDestroyed && !string.IsNullOrEmpty(e.Name) && Name != e.Name)
-        //    {
-        //        Name = e.Name;
-        //    }
+            var mob = World.Mobiles.Get(serial);
 
-        //    return string.IsNullOrEmpty(Name) ? "<out of range>" : Name;
-        //}
+            if (mob != null)
+            {
+                GetName(serial);
+            }
+        }
+
+
+       public string GetName(uint Serial)
+        {
+            Entity e = World.Get(Serial);
+
+            if (e != null && !e.IsDestroyed && !string.IsNullOrEmpty(e.Name) && Name != e.Name)
+            {
+                Name = e.Name;
+                nameCache[Serial] = Name;
+            }
+
+            if (nameCache.TryGetValue(Serial, out string cachedName))
+            {
+                var teste = string.IsNullOrEmpty(Name) ? cachedName : Name;
+                return string.IsNullOrEmpty(Name) ? cachedName : Name;
+            }
+            else
+            {
+                return string.IsNullOrEmpty(Name) ? "<friend>" : Name;
+            }
+        }
     }
 
+<<<<<<< HEAD
     internal sealed class WorldMapEntityManager
+=======
+    public class WorldMapEntityManager
+>>>>>>> dev_dust765_to_main
     {
         private bool _ackReceived;
         private uint _lastUpdate, _lastPacketSend, _lastPacketRecv;
         private readonly List<WMapEntity> _toRemove = new List<WMapEntity>();
+<<<<<<< HEAD
         private readonly World _world;
 
         public WorldMapEntityManager(World world) { _world = world; }
+=======
+        public WMapEntity _corpse;
+>>>>>>> dev_dust765_to_main
 
         public bool Enabled
         {
@@ -192,6 +215,10 @@ namespace ClassicUO.Game.Managers
 
         public void RemoveUnupdatedWEntity()
         {
+            if (_corpse != null && _corpse.LastUpdate < Time.Ticks - 1000)
+            {
+                _corpse = null;
+            }
             if (_lastUpdate > Time.Ticks)
             {
                 return;

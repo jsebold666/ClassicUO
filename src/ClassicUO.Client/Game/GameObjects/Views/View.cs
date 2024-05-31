@@ -33,6 +33,10 @@
 using System;
 using System.Runtime.CompilerServices;
 using ClassicUO.Configuration;
+// ## BEGIN - END ## // MISC2
+using ClassicUO.Game.Data;
+using ClassicUO.Dust765.Dust765;
+// ## BEGIN - END ## // MISC2
 using ClassicUO.IO;
 using ClassicUO.Assets;
 using ClassicUO.Renderer;
@@ -41,7 +45,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.GameObjects
 {
-    enum ObjectHandlesStatus
+    public enum ObjectHandlesStatus
     {
         NONE,
         OPEN,
@@ -49,7 +53,7 @@ namespace ClassicUO.Game.GameObjects
         DISPLAYING
     }
 
-    internal abstract partial class GameObject
+    public abstract partial class GameObject
     {
         public byte AlphaHue;
         public bool AllowedToDraw = true;
@@ -274,6 +278,16 @@ namespace ClassicUO.Game.GameObjects
                 y -= index.Height;
 
                 Vector2 pos = new Vector2(x, y);
+
+                // ## BEGIN - END ## // MISC2
+                if (ProfileManager.CurrentProfile.IgnoreCoTEnabled)
+                {
+                    if (StaticFilters.IsIgnoreCoT(graphic) || ProfileManager.CurrentProfile.TreeType == 1 && graphic == CombatCollection.TREE_REPLACE_GRAPHIC || ProfileManager.CurrentProfile.TreeType == 2 & graphic == CombatCollection.TREE_REPLACE_GRAPHIC_TILE)
+                    {
+                        shadow = false;
+                    }
+                }
+                // ## BEGIN - END ## // MISC2
 
                 if (shadow)
                 {

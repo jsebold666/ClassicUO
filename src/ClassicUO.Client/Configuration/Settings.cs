@@ -31,11 +31,11 @@
 #endregion
 
 using System;
+using ClassicUO.Configuration.Json;
+using Microsoft.Xna.Framework;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ClassicUO.Configuration.Json;
-using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Configuration
 {
@@ -63,16 +63,16 @@ namespace ClassicUO.Configuration
 
         [JsonPropertyName("password")] public string Password { get; set; } = string.Empty;
 
-        [JsonPropertyName("ip")] public string IP { get; set; } = "127.0.0.1";
+        [JsonPropertyName("ip")] public string IP { get; set; } = "";
 
-        [JsonPropertyName("port"), JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)] public ushort Port { get; set; } = 2593;
+        [JsonPropertyName("port"), JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)] public ushort Port { get; set; } = 0;
 
         [JsonPropertyName("ultimaonlinedirectory")] public string UltimaOnlineDirectory { get; set; } = "";
 
         [JsonPropertyName("profilespath")] public string ProfilesPath { get; set; } = string.Empty;
 
         [JsonPropertyName("clientversion")] public string ClientVersion { get; set; } = string.Empty;
-        
+
         [JsonPropertyName("lang")] public string Language { get; set; } = "";
 
         [JsonPropertyName("lastservernum")] public ushort LastServerNum { get; set; } = 1;
@@ -81,8 +81,8 @@ namespace ClassicUO.Configuration
 
         [JsonPropertyName("fps")] public int FPS { get; set; } = 60;
 
-        [JsonConverter(typeof(NullablePoint2Converter))] [JsonPropertyName("window_position")] public Point? WindowPosition { get; set; }
-        [JsonConverter(typeof(NullablePoint2Converter))] [JsonPropertyName("window_size")] public Point? WindowSize { get; set; }
+        [JsonConverter(typeof(NullablePoint2Converter))][JsonPropertyName("window_position")] public Point? WindowPosition { get; set; }
+        [JsonConverter(typeof(NullablePoint2Converter))][JsonPropertyName("window_size")] public Point? WindowSize { get; set; }
 
         [JsonPropertyName("is_win_maximized")] public bool IsWindowMaximized { get; set; } = true;
 

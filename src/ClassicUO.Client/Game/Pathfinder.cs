@@ -70,6 +70,20 @@ namespace ClassicUO.Game
         private readonly World _world;
 
         public Pathfinder(World world)
+        public static Point StartPoint => _startPoint;
+        public static Point EndPoint => _endPoint;
+        public static int PathSize => _pathSize;
+
+        public static bool AutoWalking { get; set; }
+        
+        public static bool PathindingCanBeCancelled { get; set; }
+
+        public static bool BlockMoving { get; set; }
+
+        public static bool FastRotation { get; set; }
+
+
+        private static bool CreateItemList(List<PathObject> list, int x, int y, int stepState)
         {
             _world = world;
         }
@@ -666,6 +680,7 @@ namespace ClassicUO.Game
 
         private int GetGoalDistCost(Point point, int cost)
         {
+            //return (Math.Abs(_endPoint.X - point.X) + Math.Abs(_endPoint.Y - point.Y)) * cost;
             return Math.Max(Math.Abs(_endPoint.X - point.X), Math.Abs(_endPoint.Y - point.Y));
         }
 
@@ -931,7 +946,7 @@ namespace ClassicUO.Game
                     _pathSize = totalNodes;
                     goalNode = _openList[_goalNode];
 
-                    while (totalNodes != 0)
+                    while (totalNodes > 0)
                     {
                         totalNodes--;
                         _path[totalNodes] = goalNode;
@@ -963,6 +978,8 @@ namespace ClassicUO.Game
             {
                 return false;
             }
+
+            EventSink.InvokeOnPathFinding(null, new Vector4(x, y, z, distance));
 
             for (int i = 0; i < PATHFINDER_MAX_NODES; i++)
             {

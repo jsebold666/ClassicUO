@@ -30,11 +30,14 @@
 
 #endregion
 
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
+// ## BEGIN - END ## // ART / HUE CHANGES
+using ClassicUO.Dust765.Dust765;
+// ## BEGIN - END ## // ART / HUE CHANGES
+using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
-using ClassicUO.IO;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 
@@ -90,14 +93,74 @@ namespace ClassicUO.Game.GameObjects
                 partial = false;
             }
 
+            if (SelectedObject.Object == this)
+            {
+                SpellVisualRangeManager.Instance.LastCursorTileLoc = new Vector2(X, Y);
+            }
+
+            if (SpellVisualRangeManager.Instance.IsTargetingAfterCasting())
+            {
+                hue = SpellVisualRangeManager.Instance.ProcessHueForTile(hue, this);
+            }
+
+            if (TileMarkerManager.Instance.IsTileMarked(X, Y, World.Map.Index, out var nhue))
+                hue = nhue;
+
+            if (ProfileManager.CurrentProfile.DisplayRadius && Distance == ProfileManager.CurrentProfile.DisplayRadiusDistance && System.Math.Abs(Z - World.Player.Z) < 11)
+                hue = ProfileManager.CurrentProfile.DisplayRadiusHue;
+
             Vector3 hueVec = ShaderHueTranslator.GetHueVector(hue, partial, AlphaHue / 255f);
 
-            bool isTree = StaticFilters.IsTree(graphic, out _);
+            // ## BEGIN - END ## // VISUAL HELPERS
+            if (ProfileManager.CurrentProfile.HighlightTileAtRange && Distance == ProfileManager.CurrentProfile.HighlightTileAtRangeRange)
+            {
+                hueVec.X = ProfileManager.CurrentProfile.HighlightTileRangeHue;
+                hueVec.Y = 1;
+            }
+            if (ProfileManager.CurrentProfile.HighlightTileAtRangeSpell)
+            {
+                if (TargetManager.IsTargeting && Distance == ProfileManager.CurrentProfile.HighlightTileAtRangeRangeSpell)
+                {
+                    hueVec.X = ProfileManager.CurrentProfile.HighlightTileRangeHueSpell;
+                    hueVec.Y = 1;
+                }
+            }
+            // ## BEGIN - END ## // AUTOMATIONS
+            if (ProfileManager.CurrentProfile.AutoRangeDisplayActive && Distance == ProfileManager.CurrentProfile.AutoRangeDisplayActiveRange)
+            {
+                hueVec.X = ProfileManager.CurrentProfile.AutoRangeDisplayHue;
+                hueVec.Y = 1;
+            }
+            // ## BEGIN - END ## // AUTOMATIONS
 
+            if (ProfileManager.CurrentProfile.PreviewFields)
+            {
+                if (CombatCollection.StaticFieldPreview(this))
+                {
+                    hueVec.X = 0x0040;
+                    hueVec.Y = 1;
+                }
+                if (SelectedObject.Object == this)
+                {
+                    hueVec.X = 0x0023;
+                    hueVec.Y = 1;
+                }
+            }
+            // ## BEGIN - END ## // VISUAL HELPERS
+
+            // ## BEGIN - END ## // ART / HUE CHANGES
+            /*
+            bool isTree = StaticFilters.IsTree(graphic, out _);
             if (isTree && ProfileManager.CurrentProfile.TreeToStumps)
             {
                 graphic = Constants.TREE_REPLACE_GRAPHIC;
             }
+                        */
+            // ## BEGIN - END ## // ART / HUE CHANGES
+            graphic = CombatCollection.ArtloaderFilters(graphic);
+
+            bool isTree = StaticFilters.IsTree(graphic, out _);
+            // ## BEGIN - END ## // ART / HUE CHANGES
 
             DrawStaticAnimated(
                 batcher,
@@ -132,12 +195,19 @@ namespace ClassicUO.Game.GameObjects
             {
                 ushort graphic = Graphic;
 
+                // ## BEGIN - END ## // ART / HUE CHANGES
+                /*
                 bool isTree = StaticFilters.IsTree(graphic, out _);
-
                 if (isTree && ProfileManager.CurrentProfile.TreeToStumps)
                 {
                     graphic = Constants.TREE_REPLACE_GRAPHIC;
                 }
+                            */
+                // ## BEGIN - END ## // ART / HUE CHANGES
+                graphic = CombatCollection.ArtloaderFilters(graphic);
+
+                bool isTree = StaticFilters.IsTree(graphic, out _);
+                // ## BEGIN - END ## // ART / HUE CHANGES
 
                 ref var index = ref ArtLoader.Instance.GetValidRefEntry(graphic + 0x4000);
 

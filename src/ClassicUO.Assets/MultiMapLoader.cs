@@ -71,7 +71,7 @@ namespace ClassicUO.Assets
                     {
                         _file = new UOFile(path, true);
                     }
-                    
+
                     var facetFiles = Directory.GetFiles(UOFileManager.BasePath, "*.mul", SearchOption.TopDirectoryOnly)
                         .Select(s => Regex.Match(s, "facet0.*\\.mul", RegexOptions.IgnoreCase))
                         .Where(s => s.Success)
@@ -153,7 +153,7 @@ namespace ClassicUO.Assets
             while (_file.Position < _file.Length)
             {
                 byte pic = _file.ReadByte();
-                byte size = (byte) (pic & 0x7F);
+                byte size = (byte)(pic & 0x7F);
                 bool colored = (pic & 0x80) != 0;
 
                 int currentHeight = y * pheight;

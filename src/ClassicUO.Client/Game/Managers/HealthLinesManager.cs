@@ -32,8 +32,13 @@
 
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
+// ## BEGIN - END ## // OVERHEAD / UNDERCHAR
+// ## BEGIN - END ## // OLDHEALTHLINES
+using ClassicUO.Dust765.Dust765;
+using Microsoft.Xna.Framework.Graphics;
+// ## BEGIN - END ## // OLDHEALTHLINES
+// ## BEGIN - END ## // OVERHEAD / UNDERCHAR
 using ClassicUO.Game.GameObjects;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using ClassicUO.Game.Scenes;
@@ -53,6 +58,33 @@ namespace ClassicUO.Game.Managers
         private readonly World _world;
 
         public HealthLinesManager(World world) { _world = world; }
+        
+        // ## BEGIN - END ## // OLDHEALTHLINES
+        const int OLD_BAR_HEIGHT = 3;
+        private static readonly Texture2D _edge, _back;
+        private static readonly Texture2D _edgeHealth, _backHealth;
+        private static readonly Texture2D _edgeMana, _backMana;
+        private static readonly Texture2D _edgeStamina, _backStamina;
+
+        public static float _alphamodifier = (float)ProfileManager.CurrentProfile.MultipleUnderlinesSelfPartyTransparency / 10;
+
+        public static int BIGBAR_WIDTH = 28;
+        private static int BIGBAR_HEIGHT = 3;
+        private static int BIGBAR_WIDTH_HALF = 14;
+        private static int YSPACING = 1;
+
+        static HealthLinesManager()
+        {
+            _edge = SolidColorTextureCache.GetTexture(Color.Black);
+            _back = SolidColorTextureCache.GetTexture(Color.Red);
+            _edgeHealth = SolidColorTextureCache.GetTexture(Color.Black * _alphamodifier);
+            _backHealth = SolidColorTextureCache.GetTexture(Color.Red * _alphamodifier);
+            _edgeMana = SolidColorTextureCache.GetTexture(Color.Black * _alphamodifier);
+            _backMana = SolidColorTextureCache.GetTexture(Color.Red * _alphamodifier);
+            _edgeStamina = SolidColorTextureCache.GetTexture(Color.Black * _alphamodifier);
+            _backStamina = SolidColorTextureCache.GetTexture(Color.Red * _alphamodifier);
+        }
+        // ## BEGIN - END ## // OLDHEALTHLINES
 
         public bool IsEnabled =>
             ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.ShowMobilesHP;
@@ -69,6 +101,7 @@ namespace ClassicUO.Game.Managers
                     camera.Bounds.Width,
                     camera.Bounds.Height
                 );
+                DrawTargetIndicator(batcher, TargetManager.LastTargetInfo.Serial);
             }
 
             if (SerialHelper.IsMobile(_world.TargetManager.SelectedTarget))
@@ -79,6 +112,7 @@ namespace ClassicUO.Game.Managers
                     camera.Bounds.Width,
                     camera.Bounds.Height
                 );
+                DrawTargetIndicator(batcher, TargetManager.SelectedTarget);
             }
 
             if (SerialHelper.IsMobile(_world.TargetManager.LastAttack))
@@ -89,6 +123,7 @@ namespace ClassicUO.Game.Managers
                     camera.Bounds.Width,
                     camera.Bounds.Height
                 );
+                DrawTargetIndicator(batcher, TargetManager.LastAttack);
             }
 
             if (!IsEnabled)
@@ -183,6 +218,13 @@ namespace ClassicUO.Game.Managers
                             {
                                 mobile.HitsTexture.Draw(batcher, p1.X, p1.Y);
                             }
+
+                            // ## BEGIN - END ## // OVERHEAD / UNDERCHAR
+                            CombatCollection.UpdateOverheads(mobile);
+
+                            if (ProfileManager.CurrentProfile.OverheadRange && mobile != World.Player)
+                                mobile.RangeTexture.Draw(batcher, p1.X - mobile.RangeTexture.Width, p1.Y);
+                            // ## BEGIN - END ## // OVERHEAD / UNDERCHAR
                         }
                     }
                 }
@@ -213,11 +255,64 @@ namespace ClassicUO.Game.Managers
 
                 if (mode >= 1)
                 {
-                    DrawHealthLine(batcher, mobile, p.X, p.Y, mobile.Serial != _world.Player.Serial);
+                    // ## BEGIN - END ## // OLDHEALTHLINES
+                    /*
+                    DrawHealthLine
+                    (
+                        batcher,
+                        mobile,
+                        p.X,
+                        p.Y,
+                        mobile.Serial != World.Player.Serial
+                    );
+                    */
+                    // ## BEGIN - END ## // OLDHEALTHLINES
+                    if (ProfileManager.CurrentProfile.UseOldHealthBars)
+                    {
+                        DrawOldHealthLine(batcher, mobile, p.X, p.Y + 4, mobile != World.Player);
+                    }
+                    else
+                    {
+                        DrawHealthLine(batcher, mobile, p.X, p.Y, mobile.Serial != World.Player.Serial);
+                    }
+                    // ## BEGIN - END ## // OLDHEALTHLINES
                 }
             }
         }
 
+        private void DrawTargetIndicator(UltimaBatcher2D batcher, uint serial)
+        {
+            Entity entity = World.Get(serial);
+
+            if (entity == null)
+            {
+                return;
+            }
+            if (ProfileManager.CurrentProfile == null || !ProfileManager.CurrentProfile.ShowTargetIndicator)
+            {
+                return;
+            }
+            ref readonly var indicatorInfo = ref Client.Game.Gumps.GetGump(0x756F);
+            if (indicatorInfo.Texture != null)
+            {
+                Point p = entity.RealScreenPosition;
+                p.Y += (int)(entity.Offset.Y - entity.Offset.Z) + 22 + 5;
+
+                p = Client.Game.Scene.Camera.WorldToScreen(p);
+                p.Y -= entity.FrameInfo.Height + 25;
+
+                batcher.Draw(
+                indicatorInfo.Texture,
+                new Rectangle(p.X - 24, p.Y, indicatorInfo.UV.Width, indicatorInfo.UV.Height),
+                indicatorInfo.UV,
+                ShaderHueTranslator.GetHueVector(0, false, 1.0f)
+                );
+            }
+            else
+            {
+                ProfileManager.CurrentProfile.ShowTargetIndicator = false; //This sprite doesn't exist for this client, lets avoid checking for it every frame.
+            }
+        }
         private void DrawHealthLineWithMath(
             UltimaBatcher2D batcher,
             uint serial,
@@ -245,12 +340,27 @@ namespace ClassicUO.Game.Managers
                 return;
             }
 
-            if (p.Y < 0 || p.Y > screenH - BAR_HEIGHT)
+            // ## BEGIN - END ## // OLDHEALTHLINES
+            /*
+            DrawHealthLine
+            (
+                batcher,
+                entity,
+                p.X,
+                p.Y,
+                false
+            );
+            */
+            // ## BEGIN - END ## // OLDHEALTHLINES
+            if (ProfileManager.CurrentProfile.UseOldHealthBars)
             {
-                return;
+                DrawOldHealthLine(batcher, entity, p.X, p.Y + 4, false);
             }
-
-            DrawHealthLine(batcher, entity, p.X, p.Y, false);
+            else
+            {
+                DrawHealthLine(batcher, entity, p.X, p.Y, false);
+            }
+            // ## BEGIN - END ## // OLDHEALTHLINES
         }
 
         private void DrawHealthLine(
@@ -266,7 +376,17 @@ namespace ClassicUO.Game.Managers
                 return;
             }
 
-            int per = BAR_WIDTH * entity.HitsPercentage / 100;
+            int multiplier = 1;
+            if (ProfileManager.CurrentProfile != null)
+                multiplier = ProfileManager.CurrentProfile.HealthLineSizeMultiplier;
+
+            int per = (BAR_WIDTH * multiplier) * entity.HitsPercentage / 100;
+            int offset = 2;
+
+            if (per >> 2 == 0)
+            {
+                offset = per;
+            }
 
             Mobile mobile = entity as Mobile;
 
@@ -283,26 +403,31 @@ namespace ClassicUO.Game.Managers
                 y += 22;
             }
 
-            const int MULTIPLER = 1;
 
-            ref readonly var gumpInfo = ref Client.Game.UO.Gumps.GetGump(BACKGROUND_GRAPHIC);
+            ref readonly var gumpInfo = ref Client.Game.Gumps.GetGump(BACKGROUND_GRAPHIC);
+            Rectangle bounds = gumpInfo.UV;
+
+            if (multiplier > 1)
+                x -= (int)(((BAR_WIDTH * multiplier) / 2) - (BAR_WIDTH / 2));
 
             batcher.Draw(
                 gumpInfo.Texture,
-                new Rectangle(x, y, gumpInfo.UV.Width * MULTIPLER, gumpInfo.UV.Height * MULTIPLER),
+                new Rectangle(x, y, gumpInfo.UV.Width * multiplier, gumpInfo.UV.Height * multiplier),
                 gumpInfo.UV,
                 hueVec
             );
 
-            hueVec.X = 0x21;
+            hueVec.X = 90;
 
-            if (entity.Hits != entity.HitsMax || entity.HitsMax == 0)
+            if (mobile != null)
             {
-                int offset = 2;
-
-                if (per >> 2 == 0)
+                if (mobile.IsPoisoned)
                 {
-                    offset = per;
+                    hueVec.X = 63;
+                }
+                else if (mobile.IsYellowHits)
+                {
+                    hueVec.X = 53;
                 }
 
                 gumpInfo = ref Client.Game.UO.Gumps.GetGump(HP_GRAPHIC);
@@ -320,24 +445,59 @@ namespace ClassicUO.Game.Managers
                 );
             }
 
-            hue = 90;
+            float hitPerecentage = (float)entity.Hits / (float)entity.HitsMax;
 
-            if (per > 0)
+            if (entity.HitsMax == 0)
+                hitPerecentage = 1;
+
+            batcher.Draw(
+                SolidColorTextureCache.GetTexture(Color.White),
+                new Vector2(x + (3 * multiplier), y + (4 * multiplier)),
+                new Rectangle(0, 0, (int)(((BAR_WIDTH * multiplier) - (6 * multiplier)) * hitPerecentage), (bounds.Height * multiplier) - (6 * multiplier)),
+                hueVec
+                );
+        }
+        // ## BEGIN - END ## // OLDHEALTHLINES
+        // -- CODE BELOW IS 1:1 LIKE DrawHealthLine()
+        private void DrawOldHealthLine(UltimaBatcher2D batcher, Entity entity, int x, int y, bool passive)
+        {
+            if (entity == null)
             {
-                if (mobile != null)
+                return;
+            }
+
+            Mobile mobile = entity as Mobile;
+
+            float alpha = passive ? 0.5f : 1.0f;
+            ushort hue = mobile != null ? Notoriety.GetHue(mobile.NotorietyFlag) : Notoriety.GetHue(NotorietyFlag.Gray);
+
+            // -- CODE ABOVE IS 1:1 LIKE DrawHealthLine()
+            Vector3 hueVec = ShaderHueTranslator.GetHueVector(0);
+            //Vector3 hueVec = ShaderHueTranslator.GetHueVector(0, false, Alpha);
+
+            Color color;
+
+            if (ProfileManager.CurrentProfile.MultipleUnderlinesSelfParty && mobile == World.Player || ProfileManager.CurrentProfile.MultipleUnderlinesSelfParty && World.Party.Contains(mobile))
+            {
+                if (ProfileManager.CurrentProfile.MultipleUnderlinesSelfPartyBigBars)
                 {
-                    if (mobile.IsPoisoned)
-                    {
-                        hue = 63;
-                    }
-                    else if (mobile.IsYellowHits)
-                    {
-                        hue = 53;
-                    }
+                    //LAYOUT BIGBAR
+                    BIGBAR_WIDTH = 50;
+                    BIGBAR_HEIGHT = 4;
+                    BIGBAR_WIDTH_HALF = BIGBAR_WIDTH / 2 - 17;//14;
+                    YSPACING = 1;
+                }
+                else
+                {
+                    BIGBAR_WIDTH = 34;
+                    BIGBAR_HEIGHT = 3;
+                    BIGBAR_WIDTH_HALF = BIGBAR_WIDTH / 2 - 17; //14; // = BAR_WIDTH >> 1;
+                    YSPACING = 1;
                 }
 
-                hueVec.X = hue;
+                (Color hpcolor, int maxhp, int maxmana, int maxstam) = CombatCollection.CalcUnderlines(mobile);
 
+                
                 gumpInfo = ref Client.Game.UO.Gumps.GetGump(HP_GRAPHIC);
                 batcher.DrawTiled(
                     gumpInfo.Texture,
@@ -345,7 +505,41 @@ namespace ClassicUO.Game.Managers
                     gumpInfo.UV,
                     hueVec
                 );
+                
+                //HP BAR
+                batcher.Draw(_edgeHealth, new Rectangle(x - 1 - BIGBAR_WIDTH_HALF, y - 1, BIGBAR_WIDTH + 2, BIGBAR_HEIGHT + 1), hueVec);
+                batcher.Draw(_backHealth, new Rectangle(x - BIGBAR_WIDTH_HALF + maxhp, y, BIGBAR_WIDTH - maxhp, BIGBAR_HEIGHT), hueVec);
+                batcher.Draw(SolidColorTextureCache.GetTexture(hpcolor), new Rectangle(x - BIGBAR_WIDTH_HALF, y, maxhp, BIGBAR_HEIGHT), hueVec);
+
+                //MANA BAR
+                batcher.Draw(_edgeMana, new Rectangle(x - 1 - BIGBAR_WIDTH_HALF, y + BIGBAR_HEIGHT + YSPACING - 1, BIGBAR_WIDTH + 2, BIGBAR_HEIGHT + 1), hueVec);
+                batcher.Draw(_backMana, new Rectangle(x - BIGBAR_WIDTH_HALF + maxmana, y + BIGBAR_HEIGHT + YSPACING, BIGBAR_WIDTH - maxmana, BIGBAR_HEIGHT), hueVec);
+                batcher.Draw(SolidColorTextureCache.GetTexture(Color.CornflowerBlue * _alphamodifier), new Rectangle(x - BIGBAR_WIDTH_HALF, y + BIGBAR_HEIGHT + YSPACING, maxmana, BIGBAR_HEIGHT), hueVec);
+
+                //STAM BAR
+                batcher.Draw(_edgeStamina, new Rectangle(x - 1 - BIGBAR_WIDTH_HALF, y + BIGBAR_HEIGHT + BIGBAR_HEIGHT + YSPACING + YSPACING - 1, BIGBAR_WIDTH + 2, BIGBAR_HEIGHT + 2), hueVec);
+                batcher.Draw(_backStamina, new Rectangle(x - BIGBAR_WIDTH_HALF + maxstam, y + BIGBAR_HEIGHT + BIGBAR_HEIGHT + YSPACING + YSPACING, BIGBAR_WIDTH - maxstam, BIGBAR_HEIGHT), hueVec);
+                batcher.Draw(SolidColorTextureCache.GetTexture(Color.CornflowerBlue * _alphamodifier), new Rectangle(x - BIGBAR_WIDTH_HALF, y + BIGBAR_HEIGHT + BIGBAR_HEIGHT + YSPACING + YSPACING, maxstam, BIGBAR_HEIGHT), hueVec);
+            }
+            else
+            {
+                batcher.Draw(_edge, new Rectangle(x - 1, y - 1, BAR_WIDTH + 2, OLD_BAR_HEIGHT + 2), hueVec);
+                batcher.Draw(_back, new Rectangle(x, y, BAR_WIDTH, OLD_BAR_HEIGHT), hueVec);
+
+                if (mobile.IsParalyzed)
+                    color = Color.AliceBlue;
+                else if (mobile.IsYellowHits)
+                    color = Color.Orange;
+                else if (mobile.IsPoisoned)
+                    color = Color.LimeGreen;
+                else
+                    color = Color.CornflowerBlue;
+
+                int per = BAR_WIDTH * entity.HitsPercentage / 100;
+
+                batcher.Draw(SolidColorTextureCache.GetTexture(color), new Rectangle(x, y, per, OLD_BAR_HEIGHT), hueVec);
             }
         }
+        // ## BEGIN - END ## // OLDHEALTHLINES
     }
 }
